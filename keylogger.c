@@ -2,14 +2,18 @@
 #include <fcntl.h>  // open
 #include <stdlib.h>
 #include <string.h> // strerror
+#include <stdint.h>
+#include <assert.h>
 #include <linux/input.h>
+
+#include "key_util.h"
+#include "util.h"
 
 typedef struct input_event input_event;
 
 static void rootCheck();
-static char* getKeyboardDeviceFileName();
+static char *getKeyboardDeviceFileName();
 static int openKeyboardDeviceFile();
-static char getKeyChar();
 
 /**
  * Exit with return code -1 if user does not have root privileges
@@ -49,15 +53,20 @@ int main() {
    rootCheck();
 
    int kbd_fd = openKeyboardDeviceFile();
+   assert(kbd_fd > 0);
 
    input_event event;
    while (read(kbd_fd, &event, sizeof(input_event)) > 0) {
       if (event.type == EV_KEY) {
-         printf("%d\n", event.code);
+         if (event.value == 1) { // Key press
+            char *name = getKeyText(event.code);
+            if (strcmp(name, UNKNOWN_KEY) != 0) {
+               printf("%s\n", name);
+            }
+         }
       }
    }
 
-   printf("%d\n", kbd_fd);
    close(kbd_fd);
    return 0;
 }
