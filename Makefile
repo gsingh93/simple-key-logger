@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -g
+CFLAGS := -g -Wall
 BIN_NAME := skeylogger
 OBJS := skeylogger.o key_util.o options.o config.o
 
