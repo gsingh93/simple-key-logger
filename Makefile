@@ -9,4 +9,4 @@ $(BIN_NAME): $(OBJS)
 	gcc $(CFLAGS) $(OBJS) -o $(BIN_NAME)
 
 clean:
-	rm *.o $(BIN_NAME)
+	rm -f *.o $(BIN_NAME)
